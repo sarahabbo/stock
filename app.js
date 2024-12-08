@@ -7,7 +7,7 @@ const PORT = 3000;
 // Connect to MongoDB
 const uri = "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
 
-mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 })
+mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 })
     .then(() => console.log("Connected to MongoDB"))
     .catch(err => {
         console.error("Error connecting to MongoDB:", err.message);

@@ -1,13 +1,25 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const express = require('express');
+const dotenv = require('dotenv');
+
+// Load environment variables from .env file
+dotenv.config();
+
 const app = express();
 const PORT = 3000;
 
-// Connect to MongoDB
-const uri = "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
+// MongoDB URI from environment variables
+const uri = process.env.MONGODB_URI || "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
 
-mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 })
+// Connect to MongoDB
+mongoose.connect(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000, // Timeout for MongoDB connection attempt
+    useFindAndModify: false,       // Prevent deprecated warning
+    useCreateIndex: true           // Prevent deprecated warning
+})
     .then(() => console.log("Connected to MongoDB"))
     .catch(err => {
         console.error("Error connecting to MongoDB:", err.message);
@@ -22,8 +34,6 @@ const companySchema = new mongoose.Schema({
 });
 
 // Ensure the model uses the correct collection name
-// If your collection is 'PublicCompanies', use this:
-// If your collection is something else like 'companies' or 'publiccompanies', change the third parameter accordingly
 const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanies');
 
 // Middleware for serving static files (e.g., HTML form)

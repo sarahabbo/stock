@@ -2,16 +2,16 @@
   "name": "ticker",
   "version": "1.0.0",
   "description": "Stock ticker app",
-  "main": "app.js",  // Or the entry point of your app
+  "main": "app.js",
   "scripts": {
-    "start": "node app.js"  // How to start the app
+    "start": "node app.js"
   },
   "dependencies": {
-    "express": "^4.17.1",  // Web server framework
-    "mongoose": "^5.9.7",  // MongoDB driver
-    "dotenv": "^10.0.0"    // For loading environment variables (optional, if you're using .env files)
+    "express": "^4.17.1",
+    "mongoose": "^5.9.7",
+    "dotenv": "^10.0.0"
   },
   "engines": {
-    "node": "14.x"  // Specifies the Node.js version for Heroku or any environment
+    "node": "14.x"
   }
 }

@@ -1,30 +1,32 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const express = require('express');
-const dotenv = require('dotenv');
 
-// Load environment variables from .env file
-dotenv.config();
+// You don't need dotenv since you're using Heroku config vars for MongoDB URI
+// const dotenv = require('dotenv');
 
+// Create Express app
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Use Heroku's PORT or default to 3000
 
-// MongoDB URI from environment variables
-const uri = process.env.MONGODB_URI || "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
+// Fetch the MongoDB URI from Heroku config vars
+const uri = process.env.MONGODB_URI;
 
-// Connect to MongoDB
-mongoose.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000, // Timeout for MongoDB connection attempt
-    useFindAndModify: false,       // Prevent deprecated warning
-    useCreateIndex: true           // Prevent deprecated warning
+if (!uri) {
+  console.error("MongoDB URI is not defined. Please set it in Heroku config vars.");
+  process.exit(1);  // Exit the app if the URI is missing
+}
+
+// Connect to MongoDB using mongoose
+mongoose.connect(uri, { 
+  useNewUrlParser: true, 
+  useUnifiedTopology: true 
 })
-    .then(() => console.log("Connected to MongoDB"))
-    .catch(err => {
-        console.error("Error connecting to MongoDB:", err.message);
-        process.exit(1);
-    });
+  .then(() => console.log("Connected to MongoDB successfully!"))
+  .catch(err => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);  // Exit the process if MongoDB connection fails
+  });
 
 // Define schema and model
 const companySchema = new mongoose.Schema({

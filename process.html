@@ -7,7 +7,9 @@
     <title>Search Results</title>
 </head>
 <body>
-    <h1>Search Results</h1>
+    <h1>Search Results for: {{searchBy}} - "{{searchTerm}}"</h1>
+
+    <!-- Display results from companies -->
     {{#if companies.length}}
         <ul>
             {{#each companies}}
@@ -21,6 +23,7 @@
     {{else}}
         <p>No matching companies found.</p>
     {{/if}}
+
     <a href="/">Back to Home</a>
 </body>
 </html>

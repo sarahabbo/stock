@@ -1,7 +1,15 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const express = require('express');
+const exphbs = require('express-handlebars'); 
 
+
+
+// Set up Handlebars as the view engine
+app.engine('handlebars', exphbs());
+app.set('view engine', 'handlebars');
+
+// Other middleware and routes...
 // You don't need dotenv since you're using Heroku config vars for MongoDB URI
 // const dotenv = require('dotenv');
 

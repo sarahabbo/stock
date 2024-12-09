@@ -6,7 +6,8 @@ const app = express();
 const PORT = 3000;
 
 // MongoDB setup (replace with your MongoDB URI)
-const uri = 'your-mongodb-uri'; // Replace this with your actual MongoDB URI
+const uri = process.env.MONGODB_URI || 'mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock';
+
 
 mongoose.connect(uri, { 
   useNewUrlParser: true, 

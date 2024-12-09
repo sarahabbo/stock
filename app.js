@@ -1,9 +1,6 @@
-
-
 const fs = require('fs');
 const mongoose = require('mongoose');
 const express = require('express');
-const querystring = require('querystring'); // Import querystring module
 
 // You don't need dotenv since you're using Heroku config vars for MongoDB URI
 // const dotenv = require('dotenv');

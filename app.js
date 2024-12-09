@@ -1,126 +1,95 @@
-const fs = require('fs');
-const mongoose = require('mongoose');
 const express = require('express');
-const exphbs = require('express-handlebars'); 
-
-
-
-// Set up Handlebars as the view engine
-app.engine('handlebars', exphbs());
-app.set('view engine', 'handlebars');
-
-// Other middleware and routes...
-// You don't need dotenv since you're using Heroku config vars for MongoDB URI
-// const dotenv = require('dotenv');
-
-// Create Express app
+const mongoose = require('mongoose');
+const url = require('url'); // Import url module
+const querystring = require('querystring'); // Import querystring module
 const app = express();
-const PORT = process.env.PORT || 3000; // Use Heroku's PORT or default to 3000
+const PORT = 3000;
 
-// Fetch the MongoDB URI from Heroku config vars
-const uri = process.env.MONGODB_URI;
+// MongoDB setup (replace with your MongoDB URI)
+const uri = 'your-mongodb-uri'; // Replace this with your actual MongoDB URI
 
-if (!uri) {
-  console.error("MongoDB URI is not defined. Please set it in Heroku config vars.");
-  process.exit(1);  // Exit the app if the URI is missing
-}
-
-// Connect to MongoDB using mongoose
 mongoose.connect(uri, { 
   useNewUrlParser: true, 
   useUnifiedTopology: true 
-})
-  .then(() => console.log("Connected to MongoDB successfully!"))
-  .catch(err => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);  // Exit the process if MongoDB connection fails
-  });
+}).then(() => {
+  console.log("Connected to MongoDB");
+}).catch((err) => {
+  console.error("MongoDB connection error:", err);
+});
 
-// Define schema and model
+// Example schema for company data
 const companySchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    ticker: { type: String, required: true },
-    price: { type: Number, required: true },
+  name: { type: String, required: true },
+  ticker: { type: String, required: true },
+  price: { type: Number, required: true },
 });
 
-// Ensure the model uses the correct collection name
-const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanies');
+const Company = mongoose.model('Company', companySchema);
 
-// Middleware for serving static files (e.g., HTML form)
-app.use(express.static('public'));
-
-// Home route (HTML form)
+// Serve the home page (search form)
 app.get('/', (req, res) => {
-    res.send(`
-        <form method="GET" action="/process">
-            <label>
-                <input type="radio" name="searchBy" value="name" required> Company Name
-            </label>
-            <label>
-                <input type="radio" name="searchBy" value="ticker" required> Ticker Symbol
-            </label>
-            <br><br>
-            <input type="text" name="search" placeholder="Enter name or ticker" required>
-            <br><br>
-            <button type="submit">Search</button>
-        </form>
-    `);
+  res.send(`
+    <h1>Search for a Company</h1>
+    <form method="GET" action="/process">
+      <label>
+        <input type="radio" name="searchBy" value="ticker" required>
+        Search by Ticker Symbol
+      </label>
+      <label>
+        <input type="radio" name="searchBy" value="name" required>
+        Search by Company Name
+      </label>
+      <br><br>
+      <input type="text" name="search" placeholder="Enter search term" required>
+      <button type="submit">Search</button>
+    </form>
+  `);
 });
 
-// Process route
+// Handle the GET data and render the search results
 app.get('/process', async (req, res) => {
-    const { searchBy, search } = req.query;
-    console.log("Received search request:", { searchBy, search }); // Debug message
+  const queryData = url.parse(req.url, true).query; // Parse query string from URL
+  const { searchBy, search } = queryData;
 
-    if (!searchBy || !search) {
-        console.error("Missing search parameters."); // Debug message
-        return res.status(400).send("Missing search parameters.");
+  if (!searchBy || !search) {
+    return res.status(400).send("Missing search parameters.");
+  }
+
+  try {
+    let query;
+    if (searchBy === 'name') {
+      query = { name: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive search by name
+    } else if (searchBy === 'ticker') {
+      query = { ticker: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive search by ticker
+    } else {
+      return res.status(400).send("Invalid searchBy parameter.");
     }
 
-    try {
-        let query;
-        if (searchBy === 'name') {
-            query = { name: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive name search
-        } else if (searchBy === 'ticker') {
-            query = { ticker: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive ticker search
-        } else {
-            console.error("Invalid searchBy parameter:", searchBy); // Debug message
-            return res.status(400).send("Invalid searchBy parameter.");
-        }
+    const companies = await Company.find(query);
 
-        console.log("Database query:", query); // Debug message
-        const companies = await Company.find(query);
-
-        if (companies.length === 0) {
-            console.log("No companies found for query:", query); // Debug message
-            return res.send("No companies found.");
-        }
-
-        // Display results in console
-        console.log("Search results:", companies); // Debug message
-        let resultHTML = "<h1>Search Results</h1><ul>";
-        companies.forEach(company => {
-            resultHTML += `
-                <li>
-                    <strong>${company.name}</strong> (${company.ticker}): $${company.price.toFixed(2)}
-                </li>`;
-        });
-        resultHTML += "</ul>";
-
-        // Add a "Back Home" button
-        resultHTML += `
-            <br>
-            <a href="/" style="padding: 10px; background-color: lightgray; text-decoration: none; border-radius: 5px;">Back Home</a>
-        `;
-
-        res.send(resultHTML); // Display results on the webpage
-    } catch (err) {
-        console.error("Error during database query:", err.message); // Debug message
-        res.status(500).send("An error occurred while processing your request.");
+    // Display results as HTML
+    if (companies.length > 0) {
+      let resultHtml = `<h1>Search Results</h1><ul>`;
+      companies.forEach(company => {
+        resultHtml += `
+          <li>
+            <strong>Name:</strong> ${company.name} <br>
+            <strong>Ticker:</strong> ${company.ticker} <br>
+            <strong>Price:</strong> $${company.price}
+          </li>`;
+      });
+      resultHtml += `</ul><a href="/">Back to Home</a>`;
+      res.send(resultHtml);
+    } else {
+      res.send('<p>No matching companies found.</p><a href="/">Back to Home</a>');
     }
+  } catch (err) {
+    console.error("Error during database query:", err.message);
+    res.status(500).send("An error occurred while processing your request.");
+  }
 });
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

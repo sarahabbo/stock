@@ -41,6 +41,7 @@ app.use(express.static('public'));
 
 // Home route (HTML form)
 app.get('/', (req, res) => {
+    console.log("Serving home page with search form.");
     res.send(`
         <form method="GET" action="/process">
             <label>
@@ -112,6 +113,7 @@ app.get('/process', async (req, res) => {
         res.send(resultHTML); // Display results on the webpage
     } catch (err) {
         console.error("Error during database query:", err.message); // Debug message
+        console.error("Error stack:", err.stack); // Full error stack trace for debugging
         res.status(500).send("An error occurred while processing your request.");
     }
 });
@@ -120,3 +122,4 @@ app.get('/process', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
+

@@ -1,9 +1,7 @@
 const fs = require('fs');
 const mongoose = require('mongoose');
 const express = require('express');
-
-// You don't need dotenv since you're using Heroku config vars for MongoDB URI
-// const dotenv = require('dotenv');
+const url = require('url');
 
 // Create Express app
 const app = express();
@@ -46,22 +44,26 @@ app.get('/', (req, res) => {
     res.send(`
         <form method="GET" action="/process">
             <label>
-                <input type="radio" name="searchBy" value="name" required> Company Name
+                <input type="radio" name="searchBy" value="ticker" required>
+                Search by Ticker Symbol
             </label>
             <label>
-                <input type="radio" name="searchBy" value="ticker" required> Ticker Symbol
+                <input type="radio" name="searchBy" value="name" required checked>
+                Search by Company Name
             </label>
             <br><br>
-            <input type="text" name="search" placeholder="Enter name or ticker" required>
-            <br><br>
+            <input type="text" name="search" placeholder="Enter search term" required>
             <button type="submit">Search</button>
         </form>
     `);
 });
 
-// Process route
+// Process route (parse query string)
 app.get('/process', async (req, res) => {
-    const { searchBy, search } = req.query;
+    // Parse the query string using the url module
+    const queryData = url.parse(req.url, true).query;
+    const { searchBy, search } = queryData;
+
     console.log("Received search request:", { searchBy, search }); // Debug message
 
     if (!searchBy || !search) {
@@ -94,7 +96,9 @@ app.get('/process', async (req, res) => {
         companies.forEach(company => {
             resultHTML += `
                 <li>
-                    <strong>${company.name}</strong> (${company.ticker}): $${company.price.toFixed(2)}
+                    <strong>Name:</strong> ${company.name} <br>
+                    <strong>Ticker:</strong> ${company.ticker} <br>
+                    <strong>Price:</strong> $${company.price.toFixed(2)}
                 </li>`;
         });
         resultHTML += "</ul>";
@@ -116,5 +120,3 @@ app.get('/process', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
-
-

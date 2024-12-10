@@ -1,4 +1,3 @@
-
 const express = require('express');
 const mongoose = require('mongoose');
 
@@ -6,8 +5,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); 
-// Ensure "public/index.html" exists
+app.use(express.static('public')); // This still serves static files if you have them in the 'public' folder (like CSS, JS, images)
 
 // MongoDB Connection
 mongoose
@@ -25,10 +23,9 @@ const companySchema = new mongoose.Schema({
 });
 const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanies');
 
-
 // Home (form)
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/public/index.html'); // Ensure "public/index.html" exists
+  res.sendFile(__dirname + '/index.html'); // Serve 'index.html' from the root directory
 });
 
 // Process (handles form submission and database query)
@@ -80,3 +77,4 @@ app.get('/process', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
+

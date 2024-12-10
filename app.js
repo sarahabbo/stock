@@ -1,125 +1,82 @@
-const fs = require('fs');
-const mongoose = require('mongoose');
+
 const express = require('express');
-const url = require('url');
+const mongoose = require('mongoose');
 
-// Create Express app
 const app = express();
-const PORT = process.env.PORT || 3000; // Use Heroku's PORT or default to 3000
+const port = process.env.PORT || 3000;
 
-// Fetch the MongoDB URI from Heroku config vars
-const uri = process.env.MONGODB_URI;
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public')); 
+// Ensure "public/index.html" exists
 
-if (!uri) {
-  console.error("MongoDB URI is not defined. Please set it in Heroku config vars.");
-  process.exit(1);  // Exit the app if the URI is missing
-}
+// MongoDB Connection
+mongoose
+  .connect('mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock', {
+    useNewUrlParser: true,
+  })
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-// Connect to MongoDB using mongoose
-mongoose.connect(uri, { 
-  useNewUrlParser: true, 
-  useUnifiedTopology: true 
-})
-  .then(() => console.log("Connected to MongoDB successfully!"))
-  .catch(err => {
-    console.error("MongoDB connection error:", err);
-    process.exit(1);  // Exit the process if MongoDB connection fails
-  });
-
-// Define schema and model
+// Define Schema
 const companySchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    ticker: { type: String, required: true },
-    price: { type: Number, required: true },
+  name: String,
+  ticker: String,
+  price: Number,
 });
-
-// Ensure the model uses the correct collection name
 const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanies');
 
-// Middleware for serving static files (e.g., HTML form)
-app.use(express.static('public'));
 
-// Home route (HTML form)
+// Home (form)
 app.get('/', (req, res) => {
-    console.log("Serving home page with search form.");
-    res.send(`
-        <form method="GET" action="/process">
-            <label>
-                <input type="radio" name="searchBy" value="ticker" required>
-                Search by Ticker Symbol
-            </label>
-            <label>
-                <input type="radio" name="searchBy" value="name" required checked>
-                Search by Company Name
-            </label>
-            <br><br>
-            <input type="text" name="search" placeholder="Enter search term" required>
-            <button type="submit">Search</button>
-        </form>
-    `);
+  res.sendFile(__dirname + '/index.html'); // Ensure "public/index.html" exists
 });
 
-// Process route (parse query string)
+// Process (handles form submission and database query)
 app.get('/process', async (req, res) => {
-    // Parse the query string using the url module
-    const queryData = url.parse(req.url, true).query;
-    const { searchBy, search } = queryData;
+  const { searchBy, search } = req.query;
 
-    console.log("Received search request:", { searchBy, search }); // Debug message
+  if (!searchBy || !search) {
+    res.writeHead(400, { 'Content-Type': 'text/html' });
+    res.write("Error: Missing search parameters.");
+    return res.end();
+  }
 
-    if (!searchBy || !search) {
-        console.error("Missing search parameters."); // Debug message
-        return res.status(400).send("Missing search parameters.");
+  console.log("SearchBy:", searchBy);
+  console.log("Search:", search);
+
+  let query = {};
+  if (searchBy === 'name') {
+    query = { name: { $regex: search, $options: 'i' } }; // Case-insensitive search for name
+  } else if (searchBy === 'ticker') {
+    query = { ticker: { $regex: search, $options: 'i' } }; // Case-insensitive search for ticker
+  }
+
+  console.log("Constructed Query:", query);
+
+  try {
+    const companies = await Company.find(query);
+    console.log("Query Results:", companies);
+
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.write("<h1>Search Results:</h1>");
+    if (companies.length > 0) {
+      companies.forEach(company => {
+        res.write(`<p>Name: ${company.name}, Ticker: ${company.ticker}, Price: $${company.price}</p>`);
+      });
+    } else {
+      res.write("<p>No matching companies found.</p>");
     }
-
-    try {
-        let query;
-        if (searchBy === 'name') {
-            query = { name: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive name search
-        } else if (searchBy === 'ticker') {
-            query = { ticker: { $regex: `^${search}$`, $options: 'i' } }; // Case-insensitive ticker search
-        } else {
-            console.error("Invalid searchBy parameter:", searchBy); // Debug message
-            return res.status(400).send("Invalid searchBy parameter.");
-        }
-
-        console.log("Database query:", query); // Debug message
-        const companies = await Company.find(query);
-
-        if (companies.length === 0) {
-            console.log("No companies found for query:", query); // Debug message
-            return res.send("No companies found.");
-        }
-
-        // Display results in console
-        console.log("Search results:", companies); // Debug message
-        let resultHTML = "<h1>Search Results</h1><ul>";
-        companies.forEach(company => {
-            resultHTML += `
-                <li>
-                    <strong>Name:</strong> ${company.name} <br>
-                    <strong>Ticker:</strong> ${company.ticker} <br>
-                    <strong>Price:</strong> $${company.price.toFixed(2)}
-                </li>`;
-        });
-        resultHTML += "</ul>";
-
-        // Add a "Back Home" button
-        resultHTML += `
-            <br>
-            <a href="/" style="padding: 10px; background-color: lightgray; text-decoration: none; border-radius: 5px;">Back Home</a>
-        `;
-
-        res.send(resultHTML); // Display results on the webpage
-    } catch (err) {
-        console.error("Error during database query:", err.message); // Debug message
-        console.error("Error stack:", err.stack); // Full error stack trace for debugging
-        res.status(500).send("An error occurred while processing your request.");
-    }
+    res.write('<a href="/">Back to Home</a>');
+    res.end();
+  } catch (error) {
+    console.error("Error fetching companies:", error);
+    res.writeHead(500, { 'Content-Type': 'text/html' });
+    res.write("Internal Server Error");
+    res.end();
+  }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
 });
-

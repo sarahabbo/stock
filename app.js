@@ -28,7 +28,7 @@ const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanie
 
 // Home (form)
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html'); // Ensure "public/index.html" exists
+  res.sendFile(__dirname + '/public/index.html'); // Ensure "public/index.html" exists
 });
 
 // Process (handles form submission and database query)

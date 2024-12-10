@@ -13,6 +13,7 @@ const mongoUri = process.env.MONGO_URI || "mongodb+srv://sarahabbo:24Sarah26@clu
 mongoose.connect(mongoUri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 30000  // Increase timeout to 30 seconds
 })
 .then(() => console.log("Connected to MongoDB using Mongoose!"))
 .catch(err => {

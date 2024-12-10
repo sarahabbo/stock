@@ -1,6 +1,5 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3000; // Heroku assigns a dynamic port via process.env.PORT
@@ -27,26 +26,6 @@ const companySchema = new mongoose.Schema({
 });
 
 const Company = mongoose.model('Company', companySchema, 'PublicCompanies');
-
-// Function to process and insert data (for CSV upload handling)
-async function insertCompanies() {
-    try {
-        const data = fs.readFileSync('companies-1.csv', 'utf8'); // This assumes the CSV is on your local file system, consider changing this for Heroku
-        const lines = data.split('\n').filter(line => line.trim());
-        const companies = lines.map(line => {
-            const [name, ticker, price] = line.split(',').map(item => item.trim());
-            return { name, ticker, price: parseFloat(price) };
-        }).filter(company => company.name && company.ticker && !isNaN(company.price));
-
-        await Company.insertMany(companies);
-        console.log("Data successfully inserted into PublicCompanies.");
-    } catch (err) {
-        console.error("Error during data insertion:", err.message);
-    } finally {
-        mongoose.connection.close();
-        console.log("MongoDB connection closed.");
-    }
-}
 
 // Home route (form)
 app.get('/', (req, res) => {
@@ -102,4 +81,5 @@ app.get('/process', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
+
 

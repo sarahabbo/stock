@@ -5,7 +5,9 @@ const app = express();
 const port = process.env.PORT || 3000; // Heroku assigns a dynamic port via process.env.PORT
 
 // Use environment variable for MongoDB URI
-const mongoUri = process.env.MONGO_URI || "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
+const mongoUri = process.env.MONGO_URI || "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+
 
 // MongoDB connection using Mongoose
 mongoose.connect(mongoUri, {

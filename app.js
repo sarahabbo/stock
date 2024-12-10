@@ -1,80 +1,51 @@
-const express = require('express');
+const fs = require('fs');
 const mongoose = require('mongoose');
+
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); // This still serves static files if you have them in the 'public' folder (like CSS, JS, images)
+app.use(express.static('public'));
 
-// MongoDB Connection
-mongoose
-  .connect('mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock', {
-    useNewUrlParser: true,
-  })
-  .then(() => console.log("Connected to MongoDB"))
-  .catch((err) => console.error("MongoDB connection error:", err));
+// MongoDB connection using Mongoose
+const uri = "mongodb+srv://sarahabbo:24Sarah26@cluster0.he5rw.mongodb.net/Stock";
 
-// Define Schema
+mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 5000,
+}).then(() => console.log("Connected to MongoDB using Mongoose!"))
+.catch(err => {
+    console.error("Error connecting to MongoDB:", err.message);
+    process.exit(1); // Exit with failure
+});
+
+// Define schema and explicitly set the collection name
 const companySchema = new mongoose.Schema({
-  name: String,
-  ticker: String,
-  price: Number,
-});
-const Company = mongoose.model('PublicCompanies', companySchema, 'PublicCompanies');
-
-// Home (form)
-app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html'); // Serve 'index.html' from the root directory
+    name: { type: String, required: true },
+    ticker: { type: String, required: true },
+    price: { type: Number, required: true },
 });
 
-// Process (handles form submission and database query)
-app.get('/process', async (req, res) => {
-  const { searchBy, search } = req.query;
+const Company = mongoose.model('Company', companySchema, 'PublicCompanies');
 
-  if (!searchBy || !search) {
-    res.writeHead(400, { 'Content-Type': 'text/html' });
-    res.write("Error: Missing search parameters.");
-    return res.end();
-  }
+// Function to process and insert data
+async function insertCompanies() {
+    try {
+        const data = fs.readFileSync('companies-1.csv', 'utf8');
+        const lines = data.split('\n').filter(line => line.trim());
+        const companies = lines.map(line => {
+            const [name, ticker, price] = line.split(',').map(item => item.trim());
+            return { name, ticker, price: parseFloat(price) };
+        }).filter(company => company.name && company.ticker && !isNaN(company.price));
 
-  console.log("SearchBy:", searchBy);
-  console.log("Search:", search);
-
-  let query = {};
-  if (searchBy === 'name') {
-    query = { name: { $regex: search, $options: 'i' } }; // Case-insensitive search for name
-  } else if (searchBy === 'ticker') {
-    query = { ticker: { $regex: search, $options: 'i' } }; // Case-insensitive search for ticker
-  }
-
-  console.log("Constructed Query:", query);
-
-  try {
-    const companies = await Company.find(query);
-    console.log("Query Results:", companies);
-
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.write("<h1>Search Results:</h1>");
-    if (companies.length > 0) {
-      companies.forEach(company => {
-        res.write(`<p>Name: ${company.name}, Ticker: ${company.ticker}, Price: $${company.price}</p>`);
-      });
-    } else {
-      res.write("<p>No matching companies found.</p>");
+        await Company.insertMany(companies);
+        console.log("Data successfully inserted into PublicCompanies.");
+    } catch (err) {
+        console.error("Error during data insertion:", err.message);
+    } finally {
+        mongoose.connection.close();
+        console.log("MongoDB connection closed.");
     }
-    res.write('<a href="/">Back to Home</a>');
-    res.end();
-  } catch (error) {
-    console.error("Error fetching companies:", error);
-    res.writeHead(500, { 'Content-Type': 'text/html' });
-    res.write("Internal Server Error");
-    res.end();
-  }
-});
+}
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
+insertCompanies();
